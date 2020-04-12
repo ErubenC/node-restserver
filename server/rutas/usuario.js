@@ -3,10 +3,11 @@ const bcrypt = require('bcrypt')
 const _ = require('underscore')
 
 const Usuario = require('../modelos/usuario')
+const { verificaToken, verificaAdminRole } = require('../middlewares/autenticacion')
 
 const app = express()
 
-app.post('/usuario', (req, res) => {
+app.post('/usuario', [verificaToken, verificaAdminRole], (req, res) => {
 
     let body = req.body
 
@@ -35,7 +36,7 @@ app.post('/usuario', (req, res) => {
 
 })
 
-app.get('/usuario', function(req, res) {
+app.get('/usuario', verificaToken, (req, res) => {
 
     let desde = req.query.desde || 0
     desde = Number(desde)
@@ -43,7 +44,9 @@ app.get('/usuario', function(req, res) {
     let limite = req.query.limite || 5
     limite = Number(limite)
 
-    Usuario.find({ estado: true }, 'nombre email role estado google img')
+    let estadoReq = req.query.estado
+
+    Usuario.find({ estado: estadoReq }, 'nombre email role estado google img')
         .skip(desde)
         .limit(limite)
         .exec((err, usuarios) => {
@@ -55,7 +58,7 @@ app.get('/usuario', function(req, res) {
                 })
             }
 
-            Usuario.count({ estado: true }, (err, conteo) => {
+            Usuario.countDocuments({ estado: estadoReq }, (err, conteo) => {
 
                 res.json({
                     ok: true,
@@ -71,8 +74,7 @@ app.get('/usuario', function(req, res) {
 
 })
 
-app.put('/usuario/:id', (req, res) => {
-
+app.put('/usuario/:id', [verificaToken, verificaAdminRole], (req, res) => {
     let id = req.params.id
     let body = _.pick(req.body, ['nombre', 'email', 'img', 'role', 'estado'])
 
@@ -94,15 +96,13 @@ app.put('/usuario/:id', (req, res) => {
 
 })
 
-app.delete('/usuario/:id', function(req, res) {
+app.delete('/usuario/:id', [verificaToken, verificaAdminRole], (req, res) => {
 
     let id = req.params.id
 
     let cambiaEstado = {
         estado: false
     }
-
-    //Usuario.findByIdAndRemove(id, (err, usuarioBorrado) => {
 
     Usuario.findByIdAndUpdate(id, cambiaEstado, { new: true }, (err, usuarioBorrado) => {
 
@@ -128,7 +128,6 @@ app.delete('/usuario/:id', function(req, res) {
         })
 
     })
-
 
 })
 
